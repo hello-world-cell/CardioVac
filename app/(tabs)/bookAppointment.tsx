@@ -5,7 +5,7 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-export default function HomeScreen() {
+export default function BookAppointment() {
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -16,17 +16,10 @@ export default function HomeScreen() {
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome to CardioVac!</ThemedText>
+        <ThemedText type="title">Book Appointment Here!</ThemedText>
         <HelloWave />  
       </ThemedView>
-
-      <ThemedView style={styles.stepContainer}>
        
-        <ThemedText type="subtitle">View your upcoming appointments here </ThemedText>
-        <ThemedText>
-         Sunday 4:40pm @ <ThemedText type="defaultSemiBold">Bishan Clinic</ThemedText>
-        </ThemedText>
-        </ThemedView>
 
       
     </ParallaxScrollView>
