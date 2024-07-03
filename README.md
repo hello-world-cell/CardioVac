@@ -1,8 +1,31 @@
+<<<<<<< HEAD
+
 # Welcome to your Expo app 👋
 
+=======
+
+# Recommended next steps:
+
+> > > > > > > Incoming
+
+<<<<<<< HEAD
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+=======
+Note: Make sure you have installed native code dependencies [here](https://reactnative.dev/docs/environment-setup#installing-dependencies)
+
+> > > > > > > Incoming
+
+<<<<<<< HEAD
 
 ## Get started
+
+=======
+
+### To preview and run the project on your device:
+
+> > > > > > > Incoming
+
+<<<<<<< HEAD
 
 1. Install dependencies
 
@@ -47,4 +70,14 @@ To learn more about developing your project with Expo, look at the following res
 Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- # [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+1. Open project folder in <u>Visual Studio Code</u>
+2. Run `npm install` in the terminal
+3. Run `npx expo start` in the terminal
+4. Run on For iOS device (only on MacOS)
+   1. Press `i` to view on iOS simulator or follow the instructions [here](https://docs.expo.dev/workflow/run-on-device/) to run on a physical device.
+5. Run on For android device
+   1. Press `a` to view on Android Virtual Device or follow the instructions [here](https://docs.expo.dev/workflow/run-on-device/) to run on a physical device.
+
+> > > > > > > Incoming

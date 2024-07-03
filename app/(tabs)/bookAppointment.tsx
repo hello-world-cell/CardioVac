@@ -1,46 +1,110 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const TopDoctors = () => {
+  const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
 
-export default function BookAppointment() {
+  const vaccines = [
+    {
+      name: 'Influenza',
+      info: 'Taken once a year',
+      icon: require("../../assets/influenza-1.png"),
+      eligibility: true,
+    },
+    {
+      name: 'Pneumococcal 1',
+      info: 'Taken once in a lifetime',
+      icon: require("../../assets/hand-1.png"),
+      eligibility: true,
+    },
+    {
+      name: 'Pneumococcal 2',
+      info: 'Taken once in a lifetime',
+      icon: require("../../assets/hand-1.png"),
+      eligibility: false,
+    },
+  ];
+
+  const handlePress = (vaccine: { name?: string; info?: string; icon?: any; eligibility: any; }) => {
+    if (vaccine.eligibility) {
+      navigation.navigate("bookingPage");
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Book Appointment Here!</ThemedText>
-        <HelloWave />  
-      </ThemedView>
-       
-
-      
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.vaccinations}>Vaccinations</Text>
+      {vaccines.map((vaccine, index) => (
+        <Pressable
+          key={index}
+          style={[styles.vaccineContainer, !vaccine.eligibility && styles.disabled]}
+          onPress={() => handlePress(vaccine)}
+          disabled={!vaccine.eligibility}
+        >
+          <Image style={styles.icon} source={vaccine.icon} />
+          <View style={styles.textContainer}>
+            <Text style={styles.vaccineName}>{vaccine.name}</Text>
+            <Text style={styles.vaccineInfo}>{vaccine.info}</Text>
+            <Text style={vaccine.eligibility ? styles.eligibility : styles.notEligible}>
+              {vaccine.eligibility ? 'You are eligible to take this' : 'You are not eligible to take this'}
+            </Text>
+          </View>
+        </Pressable>
+      ))}
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 16,
+    top: 80,
+  },
+  vaccinations: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  vaccineContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: '#f9f9f9',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  icon: {
+    width: 40,
+    height: 40,
+    marginRight: 16,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  textContainer: {
+    flex: 1,
+  },
+  vaccineName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  vaccineInfo: {
+    fontSize: 14,
+    color: '#666',
+  },
+  eligibility: {
+    fontSize: 14,
+    color: '#4caf50',
+  },
+  notEligible: {
+    fontSize: 14,
+    color: '#f44336',
+  },
+  disabled: {
+    opacity: 0.6,
   },
 });
+
+export default TopDoctors;

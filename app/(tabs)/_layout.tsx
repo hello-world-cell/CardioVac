@@ -24,16 +24,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-      // to use as example on features 
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="bookAppointment"
         options={{
           title: 'Book Appointment',
@@ -43,9 +33,9 @@ export default function TabLayout() {
         }}
       />
        <Tabs.Screen
-        name="information"
+        name="profile"
         options={{
-          title: 'Learning',
+          title: 'profile',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name={focused ? 'library' : 'library-outline'} color={color} />
           ),
