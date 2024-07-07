@@ -1,0 +1,19 @@
+{
+  "detectedConfig": {
+    "typescript": true,
+    "naming": "Pascal Case",
+    "unit": "em",
+    "framework": "react",
+    "styling": "'Inline Styles"
+  },
+  "locofyConfig": {
+    "project": "Healthcare app (Community)",
+    "id": "6670eca095250edfc8797117",
+    "framework": "react-native",
+    "typescript": true,
+    "project_environment": "expo_go",
+    "path": "assets/",
+    "componentsPath": "c:\\Users\\65816\\CardioVac\\components",
+    "screensPath": "c:\\Users\\65816\\CardioVac\\src\\pages"
+  }
+}
