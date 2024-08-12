@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useNavigation, NavigationProp, ParamListBase } from "@react-navigation/native";
-import { FIREBASE_DB, FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_DB, FIREBASE_AUTH } from "@/Firebase/FirebaseConfig";
 import { get, set, ref } from "firebase/database";
 import { CheckBox } from "react-native-elements";
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -29,7 +29,7 @@ const allergiesList = [
 ];
 
 interface Dose {
-  date: Date;
+  date: Date | undefined;
   remarks?: string;
 }
 
@@ -52,15 +52,18 @@ const Profile = () => {
   const userId = FIREBASE_AUTH.currentUser?.uid;
 
   useEffect(() => {
-    if (userId) {
-      const userRef = ref(FIREBASE_DB, "users" + userId);
-      get(userRef).then((snapshot) => {
+    const fetchUserData = async () => {
+      if (userId) {
+        const userRef = ref(FIREBASE_DB, "users" + userId);
+        const snapshot = await get(userRef);
         if (snapshot.exists()) {
           setUserInfo(snapshot.val());
         }
-      });
-    }
+      }
+    };
+    fetchUserData();
   }, [userId]);
+
 
   const handleSave = () => {
     if (userId) {
@@ -196,7 +199,7 @@ const Profile = () => {
                     value={dose.date || new Date()}
                     mode="date"
                     display="default"
-                    onChange={(event: any, selectedDate: Date) => {
+                    onChange={(event: any, selectedDate?: Date) => {
                       const currentDate = selectedDate || dose.date || new Date();
                       handleDoseChange('pneumococcal', index, { date: currentDate, remarks: dose.remarks });
                       setPneumococcalDatePickerVisible(prev => ({ ...prev, [index]: false }));
@@ -253,7 +256,7 @@ const Profile = () => {
                     value={dose.date || new Date()}
                     mode="date"
                     display="default"
-                    onChange={(event: any, selectedDate: Date) => {
+                    onChange={(event: any, selectedDate?: Date) => {
                       const currentDate = selectedDate || dose.date || new Date();
                       handleDoseChange('influenza', index, { date: currentDate, remarks: dose.remarks });
                       setInfluenzaDatePickerVisible(prev => ({ ...prev, [index]: false }));
@@ -295,7 +298,7 @@ const Profile = () => {
           value={new Date()}
           mode="date"
           display="default"
-          onChange={(event: any, selectedDate: Date) => {
+          onChange={(event: any, selectedDate?: Date | undefined) => {
             if (isNewDoseDatePickerVisible) {
               const { vaccineType, index } = isNewDoseDatePickerVisible;
               const remarks = userInfo[vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses'][index].remarks;

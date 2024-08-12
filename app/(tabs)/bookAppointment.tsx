@@ -3,7 +3,7 @@ import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { ParamListBase, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-const TopDoctors = () => {
+const BookAppointment = () => {
   const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
 
   const vaccines = [
@@ -107,4 +107,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default TopDoctors;
+export default BookAppointment;

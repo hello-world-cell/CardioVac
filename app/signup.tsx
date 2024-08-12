@@ -4,7 +4,7 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { useNavigation, ParamListBase } from "@react-navigation/native";
 import { FontFamily, FontSize, Color, Border } from '@/components/GlobalStyles';
 import { useState } from 'react';
-import { FIREBASE_AUTH } from "../FirebaseConfig"
+import { FIREBASE_AUTH } from "../Firebase/FirebaseConfig"
 import { createUserWithEmailAndPassword } from "@firebase/auth";
 import { CheckBox } from "react-native-elements";
 

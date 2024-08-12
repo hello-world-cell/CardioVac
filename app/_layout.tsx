@@ -15,9 +15,11 @@ import tabs from './(tabs)';
 import index from './(tabs)/index';
 import TabLayout from './(tabs)/_layout';
 import TopDoctors from './(tabs)/bookAppointment';
+import BookAppointment from './(tabs)/bookAppointment';
 import { Auth, User, onAuthStateChanged } from "@firebase/auth";
-import { FIREBASE_AUTH } from '@/FirebaseConfig';
+import { FIREBASE_AUTH } from '@/Firebase/FirebaseConfig';
 import { JsStack } from '@/components/layouts';
+
 
 import Onboarding from './initial';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -69,11 +71,8 @@ export default function RootLayout() {
       <JsStack.Screen name="signin" options={{ headerShown: false }} />
       <JsStack.Screen name="signup" options={{ headerShown: false }} />
       <JsStack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <JsStack.Screen name="bookAppointment" options={{ headerShown: false }} />
+      <JsStack.Screen name="_sitemap" options={{ headerShown: false }} />
       <JsStack.Screen name="bookingPage" options={{ headerShown: false }} />
-
-      
-     
     </JsStack>
 
     

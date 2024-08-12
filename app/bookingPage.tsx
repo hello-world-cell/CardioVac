@@ -1,18 +1,95 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+
+import { format, addDays, isWeekend } from 'date-fns';
+
+import { getAuth } from '@firebase/auth'; // Import getAuth for Firebase Authentication
+
+import saveAppointment from '../Firebase/SaveAppointment'; // Import saveAppointment function
+
+const getNextWeekdays = () => {
+  const weekdays = [];
+  let currentDate = new Date();
+
+  while (weekdays.length < 5) {
+    currentDate = addDays(currentDate, 1);
+    if (!isWeekend(currentDate)) {
+      weekdays.push(currentDate);
+    }
+  }
+
+  return weekdays;
+};
 
 const BookingScreen = () => {
-    const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-    const slots = [
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [isDatePickerVisible, setDatePickerVisibility] = useState(false);  // <--- Add this line
+  const nextWeekdays = getNextWeekdays();
+  const slots = [
     '08:30 AM', '09:00 AM', '09:30 AM',
     '10:00 AM', '11:30 AM', '12:00 PM',
     '12:30 PM', '01:30 PM'
   ];
 
+  console.log("Component Rendered");
+
+
   const handleSlotPress = (slot: string) => {
     setSelectedSlot(slot);
   };
 
+  const handleDatePress = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisibility(false);
+  };
+
+  const showDatePicker = () => {
+    setDatePickerVisibility(true);
+  };
+
+  const handleConfirm = (date: Date) => {
+    setSelectedDate(date);
+    hideDatePicker();
+  };
+
+  const handleBookPress = async () => {
+    if (!selectedSlot || !selectedDate) {
+      Alert.alert("Error", "Please select a date and time slot.");
+      return;
+    }
+  
+
+    // Get the current user's ID
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      Alert.alert("Error", "User not authenticated.");
+      return;
+    }
+
+    const userId = user.uid;
+    const appointment = {
+      date: selectedDate as Date,
+      time: selectedSlot as string,
+      place: 'Finest Health Medical Centre',
+      vaccinationShot: 'Influenza'
+    };
+
+    try {
+      await saveAppointment(userId, appointment);
+      Alert.alert("Success", "Appointment booked successfully!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to book appointment.");
+      console.error("Error booking appointment: ", error);
+    }
+  
+  }
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Book your Influenza shot</Text>
@@ -25,15 +102,31 @@ const BookingScreen = () => {
         <Text style={styles.hoursDetail}>Weekdays: 8 AM-2 PM</Text>
         <Text style={styles.hoursDetail}>Saturday: 9 AM-1 PM</Text>
       </View>
+      <Pressable style={styles.calendarIcon} onPress={showDatePicker}>
+        <Text style={styles.datePickerText}>Select Date</Text>
+      </Pressable>
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleConfirm}
+        onCancel={hideDatePicker}
+        date={selectedDate || new Date()}
+      />
+      <Text>Selected Date: {selectedDate ? format(selectedDate, 'PPP') : 'None'}</Text>
+
       <View style={styles.datePicker}>
-        <Pressable style={styles.dateButton}><Text style={styles.dateText}>Mon 21</Text></Pressable>
-        <Pressable style={styles.dateButton}><Text style={styles.dateText}>Tue 22</Text></Pressable>
-        <Pressable style={[styles.dateButton, styles.selectedDate]}><Text style={styles.dateText}>Wed 23</Text></Pressable>
-        <Pressable style={styles.dateButton}><Text style={styles.dateText}>Thu 24</Text></Pressable>
-        <Pressable style={styles.dateButton}><Text style={styles.dateText}>Fri 25</Text></Pressable>
+        {nextWeekdays.map((date, index) => (
+          <Pressable
+            key={index}
+            style={[styles.dateButton, selectedDate && format(selectedDate, 'PPP') === format(date, 'PPP') ? styles.selectedDate : undefined]}
+            onPress={() => setSelectedDate(date)}
+          >
+            <Text style={styles.dateText}>{format(date, 'EEE dd')}</Text>
+          </Pressable>
+        ))}
       </View>
       <View style={styles.slotsContainer}>
-        {slots.map((slot, index) => (
+        {slots.map((slot: any, index: any) => (
           <Pressable
             key={index}
             style={[styles.slotButton, selectedSlot === slot && styles.selectedSlot]}
@@ -43,7 +136,16 @@ const BookingScreen = () => {
           </Pressable>
         ))}
       </View>
-      <Pressable style={styles.bookButton}>
+
+      <View style={styles.summary}>
+        <Text style={styles.summaryTitle}>Appointment Summary</Text>
+        <Text style={styles.summaryDetail}>Location: Finest Health Medical Centre</Text>
+        <Text style={styles.summaryDetail}>Vaccine: Influenza</Text>
+        <Text style={styles.summaryDetail}>Date: {selectedDate ? format(selectedDate, "PPP") : "N/A"}</Text>
+        <Text style={styles.summaryDetail}>Time: {selectedSlot || "N/A"}</Text>
+      </View>
+
+      <Pressable style={styles.bookButton}  onPress={handleBookPress}>
         <Text style={styles.bookButtonText}>Book Appointment</Text>
       </Pressable>
     </View>
@@ -68,6 +170,17 @@ const styles = StyleSheet.create({
   centreName: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  calendarIcon: {
+    alignSelf: 'flex-start',
+    padding: 10,
+    backgroundColor: '#007bff',
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  datePickerText: {
+    color: '#fff',
+    fontSize: 14,
   },
   address: {
     fontSize: 14,
@@ -125,6 +238,19 @@ const styles = StyleSheet.create({
   },
   slotText: {
     fontSize: 14,
+  },
+  summary: {
+    marginBottom: 16,
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  summaryDetail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
   },
   bookButton: {
     padding: 16,

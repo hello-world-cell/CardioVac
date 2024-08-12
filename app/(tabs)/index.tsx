@@ -3,12 +3,17 @@ import { StyleSheet, View, Text, Pressable, Image } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useNavigation, ParamListBase } from "@react-navigation/native";
 import { Color, FontFamily, FontSize, Border } from "@/components/GlobalStyles";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH, FIREBASE_DB } from "@/Firebase/FirebaseConfig";
 import { onAuthStateChanged } from "@firebase/auth";
+import { FlatList } from "react-native";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 
 const Home = () => {
   const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
+  const [appointments, setAppointments] = React.useState<any[]>([]); // State to store appointments
+
 
   const handleLogout = () => {
     FIREBASE_AUTH.signOut()
@@ -20,14 +25,13 @@ const Home = () => {
       });
   };
 
-  const [userEmail, setUserEmail] = React.useState<string | null>(null);
-
 
   React.useEffect(() => {
     const auth = FIREBASE_AUTH;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUserEmail(user.email);
+        fetchAppointments(user.uid); // Fetch appointments when user is authenticated
       } else {
         setUserEmail(null);
       }
@@ -35,6 +39,33 @@ const Home = () => {
 
     return unsubscribe;
   }, []);
+
+  const fetchAppointments = async (userId: string) => {
+    try {
+      const appointmentsRef = collection(FIREBASE_DB, "appointments");
+      const q = query(appointmentsRef, where("userId", "==", userId));
+      const querySnapshot = await getDocs(q);
+
+      const fetchedAppointments: any[] = [];
+      querySnapshot.forEach((doc) => {
+        fetchedAppointments.push({ id: doc.id, ...doc.data() });
+      });
+
+      setAppointments(fetchedAppointments);
+    } catch (error) {
+      console.error("Error fetching appointments: ", error);
+    }
+  };
+
+  const renderAppointment = ({ item }: { item: any }) => (
+    <View style={styles.appointmentContainer}>
+      <Text style={styles.appointmentText}>Event: {item.vaccinationShot}</Text>
+      <Text style={styles.appointmentText}>Location: {item.place}</Text>
+      <Text style={styles.appointmentText}>Date: {item.date}</Text>
+      <Text style={styles.appointmentText}>Time: {item.time}</Text>
+    </View>
+  );
+
 
   return (
     <View style={styles.home}>
@@ -70,12 +101,22 @@ const Home = () => {
         <View style={[styles.roundedRectangle1, styles.roundedBorder]} />
       </View>
       <Text style={styles.upcomingEvents}>Upcoming events</Text>
-      <Text style={[styles.date, styles.dateTypo]}>Date</Text>
+      {appointments.length > 0 ? (
+        <FlatList
+          data={appointments}
+          renderItem={renderAppointment}
+          keyExtractor={(item) => item.id}
+          style={styles.appointmentList}
+        />
+      ) : (
+        <Text style={styles.noAppointmentsText}>No upcoming appointments.</Text>
+      )}
+      {/* <Text style={[styles.date, styles.dateTypo]}>Date</Text>
       <Text style={[styles.influenzaShot, styles.text1Typo]}>
         Influenza shot
       </Text>
       <Text style={[styles.text1, styles.text1Typo]}>13/10/24</Text>
-      <Text style={[styles.event, styles.dateTypo]}>Event</Text>
+      <Text style={[styles.event, styles.dateTypo]}>Event</Text> */}
       <View style={[styles.groupView, styles.groupViewLayout]}>
         <View style={[styles.rectangleGroup, styles.groupLayout]}>
           <View style={[styles.rectangleView, styles.groupLayout]} />
@@ -114,6 +155,27 @@ const Home = () => {
 };
 
 const styles = StyleSheet.create({
+  appointmentContainer: {
+    marginVertical: 10,
+    padding: 10,
+    backgroundColor: '#f8f8f8',
+    borderRadius: Border.br_7xs,
+  },
+  appointmentText: {
+    color: Color.colorBlack,
+    fontSize: FontSize.size_sm,
+    fontFamily: FontFamily.poppinsRegular,
+  },
+  appointmentList: {
+    marginTop: 10,
+  },
+  noAppointmentsText: {
+    marginTop: 20,
+    color: Color.colorBlack,
+    fontSize: FontSize.size_sm,
+    textAlign: "center",
+    fontFamily: FontFamily.poppinsRegular,
+  },
   roundedBorder: {
     borderWidth: 1,
     borderStyle: "solid",

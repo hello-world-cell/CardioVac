@@ -1,11 +1,11 @@
 import * as React from "react";
-import { Text, StyleSheet, View, Pressable, Image, TextInput } from "react-native";
+import { ActivityIndicator, Text, StyleSheet, View, Pressable, Image, TextInput } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { useNavigation, ParamListBase } from "@react-navigation/native";
 import { FontFamily, FontSize, Color, Border } from '@/components/GlobalStyles';
 import { signInWithEmailAndPassword } from '@firebase/auth';
 import { useState } from "react";
-import { FIREBASE_AUTH } from "@/FirebaseConfig";
+import { FIREBASE_AUTH } from "@/Firebase/FirebaseConfig";
 import TabLayout from "./(tabs)/_layout";
 const SignIn = () => {
   const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
@@ -22,7 +22,12 @@ const SignIn = () => {
       console.log(response);
       navigation.navigate("(tabs)");
     } catch (error: any) {
-      console.log(error);
+      let errorMessage = "Sign in failed.";
+      if (error.code === "auth/user-not-found") {
+        errorMessage = "No user found with this email.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password.";
+      }
       alert("Sign in failed: " + error.message);
     } finally {
       setLoading(false);
@@ -98,6 +103,7 @@ const SignIn = () => {
           </Pressable>
         </View>
       </View>
+      {loading && <ActivityIndicator size="large" color={Color.colorDodgerblue_100} />}
     </View>
   );
 };
