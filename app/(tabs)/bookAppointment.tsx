@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Linking } from 'react-native';
 import { ParamListBase, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -114,18 +114,21 @@ const BookAppointment = () => {
       info: 'Taken once a year',
       icon: require("../../assets/influenza-1.png"),
       eligibility: eligibility.influenza,
+      url:'https://www.healthhub.sg/a-z/medications/influenza-vaccine'
     },
     {
       name: 'Pneumococcal 1',
       info: 'Taken once in a lifetime',
       icon: require("../../assets/hand-1.png"),
       eligibility: eligibility.pneumococcal1,
+      url: 'https://www.healthhub.sg/a-z/medications/pneumococcal-vaccine'
     },
     {
       name: 'Pneumococcal 2',
       info: 'Taken once in a lifetime',
       icon: require("../../assets/hand-1.png"),
       eligibility: eligibility.pneumococcal2,
+      url:'https://www.healthhub.sg/a-z/medications/pneumococcal-vaccine'
     },
   ];
 
@@ -162,6 +165,9 @@ const BookAppointment = () => {
             <Text style={vaccine.eligibility ? styles.eligibility : styles.notEligible}>
               {vaccine.eligibility ? 'You are eligible to take this' : 'You are not eligible to take this'}
             </Text>
+            <Pressable onPress={() => Linking.openURL(vaccine.url)}>
+              <Text style={styles.learnMoreText}>Learn More</Text>
+            </Pressable>
           </View>
         </Pressable>
       ))}
@@ -216,6 +222,12 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.6,
+  },
+  learnMoreText: {
+    color: '#1E90FF', // A blue color to indicate a link
+    textDecorationLine: 'underline', // Underline to indicate it's a link
+    marginTop: 5, // Space above the link
+    fontSize: 14, // Adjust the size as needed
   },
 });
 

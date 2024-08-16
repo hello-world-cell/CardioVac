@@ -119,7 +119,7 @@ const Home = () => {
         <Text style={styles.upcomingEvents}>Upcoming events</Text>
         <View style={styles.eventDetails}>
           <Text style={styles.eventDetailText}>Date</Text>
-          <Text style={styles.eventDetailText}>Shot</Text>
+          <Text style={styles.eventDetailText}>Vaccine</Text>
           <Text style={styles.eventDetailText}>Time</Text>
         </View>
         {appointments.length > 0 ? (
