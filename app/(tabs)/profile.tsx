@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   TextInput,
@@ -13,6 +14,8 @@ import { get, set, ref } from "firebase/database";
 import { CheckBox } from "react-native-elements";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Color } from "@/components/GlobalStyles";
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+
 
 const conditionsList = [
   "Asthma",
@@ -45,39 +48,64 @@ const Profile = () => {
     isPneumococcalGiven: false,
     isInfluenzaGiven: false,
   });
-  const [isPneumococcalDatePickerVisible, setPneumococcalDatePickerVisible] = useState<{ [key: number]: boolean }>({});
-  const [isInfluenzaDatePickerVisible, setInfluenzaDatePickerVisible] = useState<{ [key: number]: boolean }>({});
-  const [isNewDoseDatePickerVisible, setNewDoseDatePickerVisible] = useState<{ vaccineType: 'pneumococcal' | 'influenza'; index: number; visible: boolean } | null>(null);
+  // const [isPneumococcalDatePickerVisible, setPneumococcalDatePickerVisible] = useState<{ [key: number]: boolean }>({});
+  // const [isInfluenzaDatePickerVisible, setInfluenzaDatePickerVisible] = useState<{ [key: number]: boolean }>({});
+  // const [isNewDoseDatePickerVisible, setNewDoseDatePickerVisible] = useState<{ vaccineType: 'pneumococcal' | 'influenza'; index: number; visible: boolean } | null>(null);
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDose, setSelectedDose] = useState<{ vaccineType: 'pneumococcal' | 'influenza'; index: number } | null>(null);
 
   const userId = FIREBASE_AUTH.currentUser?.uid;
+  //firebase
+  // useEffect(() => {
+  //   const fetchUserData = async () => {
+  //     if (userId) {
+  //       const userRef = ref(FIREBASE_DB, "users" + userId);
+  //       const snapshot = await get(userRef);
+  //       if (snapshot.exists()) {
+  //         setUserInfo(snapshot.val());
+  //       }
+  //     }
+  //   };
+  //   fetchUserData();
+  // }, [userId]);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (userId) {
-        const userRef = ref(FIREBASE_DB, "users" + userId);
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-          setUserInfo(snapshot.val());
+      try {
+        const storedUserInfo = await AsyncStorage.getItem('userInfo');
+        if (storedUserInfo) {
+          setUserInfo(JSON.parse(storedUserInfo));
         }
+      } catch (error) {
+        console.error("Error fetching user data from AsyncStorage:", error);
       }
     };
     fetchUserData();
-  }, [userId]);
+  }, []);
 
 
-  const handleSave = () => {
-    if (userId) {
-      const userRef = ref(FIREBASE_DB, `users/${userId}`);
-      console.log("userRef:", userRef); // Log userRef
-      console.log("userInfo:", userInfo); // Log userInfo
-      set(userRef, { ...userInfo })
-      .catch((error) => {
-        console.error("Error saving user data: ", error);})
+  const handleSave = async () => {
+    // if (userId) {
+    //   const userRef = ref(FIREBASE_DB, `users/${userId}`);
+    //   console.log("userRef:", userRef); // Log userRef
+    //   console.log("userInfo:", userInfo); // Log userInfo
+    //   set(userRef, { ...userInfo })
+    //   .catch((error) => {
+    //     console.error("Error saving user data: ", error);})
       
-      console.log("User data saved successfully!");
+    //   console.log("User data saved successfully!");
     
-    } else {
-      console.error("No user ID found. User might not be logged in.");
+    // } else {
+    //   console.error("No user ID found. User might not be logged in.");
+    // }
+    try {
+      await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+      console.log("User data saved to AsyncStorage successfully!");
+
+      navigation.navigate("bookAppointment");
+    } catch (error) {
+      console.error("Error saving user data to AsyncStorage: ", error);
     }
   };
   
@@ -111,14 +139,50 @@ const Profile = () => {
 
 
 
+  // const addDose = (vaccineType: 'pneumococcal' | 'influenza') => {
+  //   const key = vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses';
+  //   setUserInfo(prevState => {
+  //     const newDoses = [...prevState[key], { date: null, remarks: '' }];
+  //     setNewDoseDatePickerVisible({ vaccineType, index: newDoses.length - 1, visible: true });
+  //     return { ...prevState, [key]: newDoses };
+  //   });
+  // };
+  
+
+  const showDatePicker = (vaccineType: 'pneumococcal' | 'influenza', index: number) => {
+  const key = vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses';
+  if (userInfo[key] && userInfo[key][index]) {
+    setSelectedDose({ vaccineType, index });
+    setSelectedDate(userInfo[key][index].date || new Date());
+    setDatePickerVisible(true);
+  }
+  };
+
+  const handleConfirm = (date: Date) => {
+    if (selectedDose) {
+      handleDoseChange(
+        selectedDose.vaccineType,
+        selectedDose.index,
+        { date, remarks: userInfo[selectedDose.vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses'][selectedDose.index].remarks }
+      );
+    }
+    hideDatePicker();
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisible(false);
+    setSelectedDose(null);
+  };
+
   const addDose = (vaccineType: 'pneumococcal' | 'influenza') => {
     const key = vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses';
     setUserInfo(prevState => {
       const newDoses = [...prevState[key], { date: null, remarks: '' }];
-      setNewDoseDatePickerVisible({ vaccineType, index: newDoses.length - 1, visible: true });
       return { ...prevState, [key]: newDoses };
     });
+    showDatePicker(vaccineType, userInfo[key].length); // Show date picker for the newly added dose
   };
+  
 
   const removeDose = (vaccineType: 'pneumococcal' | 'influenza', index: number) => {
     const key = vaccineType === 'pneumococcal' ? 'pneumococcalDoses' : 'influenzaDoses';
@@ -128,6 +192,9 @@ const Profile = () => {
       return { ...prevState, [key]: doses };
     });
   };
+
+  const pneumococcalDoseCount = userInfo.pneumococcalDoses.length;
+  const influenzaDoseCount = userInfo.influenzaDoses.length;
 
   return (
     <ScrollView style={styles.profile}>
@@ -177,7 +244,9 @@ const Profile = () => {
       <View style={styles.inputGroup}>
         <Text style={styles.label}>Vaccination Records</Text>
         <View style={styles.vaccineGroup}>
+          <Text style={styles.countLabel}>Pneumococcal Doses: {pneumococcalDoseCount}</Text>
           <Text style={styles.vaccineLabel}>Pneumococcal Vaccine</Text>
+
           <View style={styles.checkboxContainer}>
             <CheckBox
               checked={userInfo.isPneumococcalGiven}
@@ -190,11 +259,14 @@ const Profile = () => {
               <View style={styles.doseContent}>
                 <Text style={styles.doseLabel}>Dose {index + 1}</Text>
                 <Pressable
-                  onPress={() => setPneumococcalDatePickerVisible(prev => ({ ...prev, [index]: true }))}
+                  //onPress={() => setPneumococcalDatePickerVisible(prev => ({ ...prev, [index]: true }))}
+                  onPress={() => showDatePicker('pneumococcal', index)}
                 >
-                  <Text>{dose.date ? dose.date.toDateString() : 'Select Date'}</Text>
+                  {/* //<Text>{dose.date ? dose.date.toDateString() : 'Select Date'}</Text> */}
+                  <Text>{dose.date ? new Date(dose.date).toDateString() : 'Select Date'}</Text>
+
                 </Pressable>
-                {isPneumococcalDatePickerVisible[index] && (
+                {/* {isPneumococcalDatePickerVisible[index] && (
                   <DateTimePicker
                     value={dose.date || new Date()}
                     mode="date"
@@ -205,7 +277,7 @@ const Profile = () => {
                       setPneumococcalDatePickerVisible(prev => ({ ...prev, [index]: false }));
                     }}
                   />
-                )}
+                )} */}
               </View>
               <TextInput
                 style={styles.remarksInput}
@@ -214,7 +286,6 @@ const Profile = () => {
                 onChangeText={(text) => handleDoseChange('pneumococcal', index, { ...dose, remarks: text })}
               />
               <View style={styles.removeButtonContainer}>
-
                 <Pressable
                   style={styles.removeButton}
                   onPress={() => removeDose('pneumococcal', index)}
@@ -232,6 +303,7 @@ const Profile = () => {
             <Text style={styles.addButtonText}>Add Dose</Text>
           </Pressable>
         </View>
+        <Text style={styles.countLabel}>Influenza Doses: {influenzaDoseCount}</Text>
         <View style={styles.vaccineGroup}>
           <Text style={styles.vaccineLabel}>Influenza Vaccine</Text>
           <View style={styles.checkboxContainer}>
@@ -245,13 +317,16 @@ const Profile = () => {
             <View key={index} style={styles.doseContainer}>
               <View style={styles.doseContent}>
 
-                <Text style={styles.doseLabel}>Dose {index + 1}</Text>
+                <Text style={styles.doseLabel}>Dose {index +1}</Text>
                 <Pressable
-                  onPress={() => setInfluenzaDatePickerVisible(prev => ({ ...prev, [index]: true }))}
+                  //onPress={() => setInfluenzaDatePickerVisible(prev => ({ ...prev, [index]: true }))}
+                  onPress={() => showDatePicker('influenza', index)}
                 >
-                  <Text>{dose.date ? dose.date.toDateString() : 'Select Date'}</Text>
+                  {/* <Text>{dose.date ? dose.date.toDateString() : 'Select Date'}</Text> */}
+                  <Text>{dose.date ? new Date(dose.date).toDateString() : 'Select Date'}</Text>
+
                 </Pressable>
-                {isInfluenzaDatePickerVisible[index] && (
+                {/* {isInfluenzaDatePickerVisible[index] && (
                   <DateTimePicker
                     value={dose.date || new Date()}
                     mode="date"
@@ -262,7 +337,7 @@ const Profile = () => {
                       setInfluenzaDatePickerVisible(prev => ({ ...prev, [index]: false }));
                     }}
                   />
-                )}
+                )} */}
               </View>
               <TextInput
                 style={styles.remarksInput}
@@ -293,7 +368,7 @@ const Profile = () => {
       <Pressable style={styles.saveButton} onPress={handleSave}>
         <Text style={styles.saveButtonText}>Save</Text>
       </Pressable>
-      {isNewDoseDatePickerVisible && (
+      {/* {isNewDoseDatePickerVisible && (
         <DateTimePicker
           value={new Date()}
           mode="date"
@@ -307,7 +382,14 @@ const Profile = () => {
             }
           }}
         />
-      )}
+      )} */}
+      <DateTimePickerModal
+        isVisible={datePickerVisible}
+        mode="date"
+        onConfirm={handleConfirm}
+        onCancel={hideDatePicker}
+        date={selectedDate || new Date()}
+      />
 
     </ScrollView>
   );
@@ -407,6 +489,11 @@ const styles = StyleSheet.create({
   },
   removeButtonContainer: {
     alignSelf: "auto",
+    marginTop: 10,
+  },
+  countLabel: {
+    fontSize: 14,
+    fontWeight: "bold",
     marginTop: 10,
   },
 

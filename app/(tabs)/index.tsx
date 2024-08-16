@@ -1,19 +1,29 @@
 import * as React from "react";
-import { StyleSheet, View, Text, Pressable, Image } from "react-native";
+import { StyleSheet, View, Text, Image, FlatList, Pressable, Dimensions } from "react-native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { useNavigation, ParamListBase } from "@react-navigation/native";
+import { useNavigation, ParamListBase, useFocusEffect } from "@react-navigation/native";
 import { Color, FontFamily, FontSize, Border } from "@/components/GlobalStyles";
-import { FIREBASE_AUTH, FIREBASE_DB } from "@/Firebase/FirebaseConfig";
+import { FIREBASE_AUTH } from "@/Firebase/FirebaseConfig";
 import { onAuthStateChanged } from "@firebase/auth";
-import { FlatList } from "react-native";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { removeAppointment } from "../Data/SaveAppointment";
+import { color } from "react-native-elements/dist/helpers";
 
+const { height } = Dimensions.get('window');
+
+interface Appointment {
+  date: string;
+  time: string;
+  place: string;
+  vaccinationShot: string;
+}
 
 const Home = () => {
   const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
   const [userEmail, setUserEmail] = React.useState<string | null>(null);
-  const [appointments, setAppointments] = React.useState<any[]>([]); // State to store appointments
+  const [appointments, setAppointments] = React.useState<Appointment[]>([]);
 
+ 
 
   const handleLogout = () => {
     FIREBASE_AUTH.signOut()
@@ -25,241 +35,128 @@ const Home = () => {
       });
   };
 
-
-  React.useEffect(() => {
-    const auth = FIREBASE_AUTH;
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserEmail(user.email);
-        fetchAppointments(user.uid); // Fetch appointments when user is authenticated
-      } else {
-        setUserEmail(null);
-      }
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const fetchAppointments = async (userId: string) => {
+  const fetchLocalAppointments = async () => {
     try {
-      const appointmentsRef = collection(FIREBASE_DB, "appointments");
-      const q = query(appointmentsRef, where("userId", "==", userId));
-      const querySnapshot = await getDocs(q);
-
-      const fetchedAppointments: any[] = [];
-      querySnapshot.forEach((doc) => {
-        fetchedAppointments.push({ id: doc.id, ...doc.data() });
-      });
-
-      setAppointments(fetchedAppointments);
+      const storedAppointments = await AsyncStorage.getItem('appointments');
+      const appointments: Appointment[] = storedAppointments ? JSON.parse(storedAppointments) : [];
+      setAppointments(appointments);
     } catch (error) {
-      console.error("Error fetching appointments: ", error);
+      console.error("Error reading appointments from AsyncStorage: ", error);
     }
   };
+  // React.useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
+  //     if (user) {
+  //       setUserEmail(user.email);
+  //       fetchLocalAppointments();
+  //     } else {
+  //       setUserEmail(null);
+  //     }
+  //   });
 
-  const renderAppointment = ({ item }: { item: any }) => (
-    <View style={styles.appointmentContainer}>
-      <Text style={styles.appointmentText}>Event: {item.vaccinationShot}</Text>
-      <Text style={styles.appointmentText}>Location: {item.place}</Text>
-      <Text style={styles.appointmentText}>Date: {item.date}</Text>
-      <Text style={styles.appointmentText}>Time: {item.time}</Text>
-    </View>
+  //   return unsubscribe;
+  // }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      const unsubscribe = onAuthStateChanged(FIREBASE_AUTH, (user) => {
+        if (user) {
+          setUserEmail(user.email);
+          fetchLocalAppointments();
+        } else {
+          setUserEmail(null);
+        }
+      });
+
+      // Return unsubscribe function to clean up the listener when the screen loses focus
+      return unsubscribe;
+    }, []) // Empty dependency array to ensure this only runs when the screen is focused
   );
 
+  //appointments.filter(appointment => appointment.vaccinationShot === type).length;
+
+  const InlfuenzaNumber = appointments.filter(appointment => appointment.vaccinationShot === "Influenza").length;
+  const PneumococcalNumber = appointments.filter(appointment => (appointment.vaccinationShot === "PCV13" ||appointment.vaccinationShot === "PPSV23" )).length;
+
+  const renderAppointment = ({ item }: { item: Appointment }) => (
+    <View style={styles.appointmentContainer}>
+      <Text style={styles.appointmentDate}>{new Date(item.date).toLocaleDateString()}</Text>
+      <Text style={styles.appointmentEvent}>{item.vaccinationShot}</Text>
+      <Text style={styles.appointmentTime}>{item.time}</Text>
+      <Pressable onPress={() => handleDeleteAppointment(item)}>
+        <Text style={styles.deleteText}>Cancel</Text>
+      </Pressable>
+    </View>
+  );
+  const username = userEmail?.split('@', 1)[0]
+
+  //deleteing appointments
+  // const handleDeleteAppointment = (appointment: Appointment) => {
+  //   removeAppointment(appointment);
+  // };
+  const handleDeleteAppointment = async (appointment: Appointment) => {
+    await removeAppointment(appointment, (updatedAppointments: Appointment[]) => {
+      setAppointments(updatedAppointments);
+    });
+  };
 
   return (
     <View style={styles.home}>
       <View style={[styles.roundedRectangle, styles.roundedBorder]} />
+      <View style={styles.headerContainer}>
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
+        <Image
+            style={styles.logo}
+            source={require("../../assets/images/logo.png")}
+          />
+        <Text style={styles.welcome}>Welcome!</Text>
+        <Text style={styles.userName}>{username || "User"}</Text>
+        
+      </View>
 
-      <View style={[styles.groupContainer, styles.groupPosition]}>
-        <View
-          style={[
-            styles.gradientBlueAbstractBackgroParent,
-            styles.groupPosition,
-          ]}
-        >
-          <View style={[styles.groupFrame, styles.groupFrameLayout]}>
-            <View style={[styles.welcomeParent, styles.groupFrameLayout]}>
-              <Text style={[styles.welcome, styles.welcomeFlexBox]}>
-                Welcome user! {userEmail ? userEmail : "User"}
-              </Text>   
-            </View>
-          </View>
-          <Image
-            style={[styles.groupChild, styles.groupPosition]}
-            source={require("../../assets/group-226.png")}
+      <View style={styles.eventsContainer}>
+        <Text style={styles.upcomingEvents}>Upcoming events</Text>
+        <View style={styles.eventDetails}>
+          <Text style={styles.eventDetailText}>Date</Text>
+          <Text style={styles.eventDetailText}>Event</Text>
+          <Text style={styles.eventDetailText}>Time</Text>
+        </View>
+        {appointments.length > 0 ? (
+          <FlatList
+            data={appointments}
+            renderItem={renderAppointment}
+            keyExtractor={(item, index) => index.toString()}
+            style={styles.appointmentList}
           />
-        </View>
-        <View style={[styles.groupItemLayout]}>
-          <Pressable
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </Pressable>
-        </View>
-        <View style={[styles.roundedRectangle1, styles.roundedBorder]} />
+        ) : (
+          <Text style={styles.noAppointmentsText}>No upcoming appointments.</Text>
+        )}
       </View>
-      <Text style={styles.upcomingEvents}>Upcoming events</Text>
-      {appointments.length > 0 ? (
-        <FlatList
-          data={appointments}
-          renderItem={renderAppointment}
-          keyExtractor={(item) => item.id}
-          style={styles.appointmentList}
-        />
-      ) : (
-        <Text style={styles.noAppointmentsText}>No upcoming appointments.</Text>
-      )}
-      {/* <Text style={[styles.date, styles.dateTypo]}>Date</Text>
-      <Text style={[styles.influenzaShot, styles.text1Typo]}>
-        Influenza shot
-      </Text>
-      <Text style={[styles.text1, styles.text1Typo]}>13/10/24</Text>
-      <Text style={[styles.event, styles.dateTypo]}>Event</Text> */}
-      <View style={[styles.groupView, styles.groupViewLayout]}>
-        <View style={[styles.rectangleGroup, styles.groupLayout]}>
-          <View style={[styles.rectangleView, styles.groupLayout]} />
-          <Image
-            style={[styles.chill1Icon, styles.iconLayout]}
-            source={require("../../assets/chill-1.png")}
-            //source={require("../../assets/breathing-1.png")}
-          />
-          <Text style={[styles.influenzaShots, styles.shotsTypo]}>
-            Influenza shots
-          </Text>
-          <Text style={[styles.text2, styles.textTypo]}>0</Text>
-        </View>
-       
-      </View>
-      <View style={[styles.groupView2, styles.groupViewLayout]}>
 
-        <View style={[styles.rectangleGroup, styles.groupLayout]}>
-          <View style={[styles.rectangleView, styles.groupLayout]} />
+      <View style={styles.shotsContainer}>
+        <View style={styles.shotBox}>
           <Image
-            style={[styles.chill1Icon, styles.iconLayout]}
-            source={require("../../assets/breathing-1.png")}
+            style={styles.shotIcon}
+            source={require("../../assets/chill-1.png")} // Update with the correct path to the influenza icon
           />
-          <Text style={[styles.influenzaShots, styles.shotsTypo]}>
-          Pneumococcal  shots
-          </Text>
-          <Text style={[styles.text2, styles.textTypo]}>0</Text>
+          <Text style={styles.shotText}>Influenza shots</Text>
+          <Text style={styles.shotCount}>{InlfuenzaNumber}</Text>
         </View>
-       
+        <View style={styles.shotBox}>
+          <Image
+            style={styles.shotIcon}
+            source={require("../../assets/breathing-1.png")}// Update with the correct path to the pneumococcal icon
+          />
+          <Text style={styles.shotText}>Pneumococcal shots</Text>
+          <Text style={styles.shotCount}>{PneumococcalNumber}</Text>
+        </View>
       </View>
-      </View>
-     
-     
-    
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  appointmentContainer: {
-    marginVertical: 10,
-    padding: 10,
-    backgroundColor: '#f8f8f8',
-    borderRadius: Border.br_7xs,
-  },
-  appointmentText: {
-    color: Color.colorBlack,
-    fontSize: FontSize.size_sm,
-    fontFamily: FontFamily.poppinsRegular,
-  },
-  appointmentList: {
-    marginTop: 10,
-  },
-  noAppointmentsText: {
-    marginTop: 20,
-    color: Color.colorBlack,
-    fontSize: FontSize.size_sm,
-    textAlign: "center",
-    fontFamily: FontFamily.poppinsRegular,
-  },
-  roundedBorder: {
-    borderWidth: 1,
-    borderStyle: "solid",
-    position: "absolute",
-  },
-  groupPosition: {
-    width: 360,
-    left: 0,
-    position: "absolute",
-  },
-  textFlexBox: {
-    alignItems: "center",
-    display: "flex",
-    color: Color.colorGray_100,
-  },
-  groupFrameLayout: {
-    height: 69,
-    width: 261,
-    position: "absolute",
-  },
-  welcomeFlexBox: {
-    textAlign: "left",
-    alignItems: "center",
-    display: "flex",
-    color: Color.colorGray_100,
-    fontFamily: FontFamily.poppinsSemiBold,
-    left: 0,
-    position: "absolute",
-  },
-  groupItemLayout: {
-    height: 79,
-    width: 360,
-    left: 0,
-    position: "absolute",
-  },
-  shotsTypo: {
-    fontSize: FontSize.size_xs,
-    textAlign: "left",
-    fontWeight: "500",
-    fontFamily: FontFamily.poppinsSemiBold,
-    position: "absolute",
-  },
-  dateTypo: {
-    top: 376,
-    color: Color.colorBlack,
-    fontSize: FontSize.size_2xs,
-    textAlign: "left",
-    fontWeight: "500",
-    fontFamily: FontFamily.poppinsSemiBold,
-    position: "absolute",
-  },
-  text1Typo: {
-    fontSize: FontSize.size_sm,
-    top: 407,
-    color: Color.colorBlack,
-    textAlign: "left",
-    fontFamily:FontFamily.poppinsSemiBold,
-    position: "absolute",
-  },
-  groupViewLayout: {
-    height: 145,
-    position: "absolute",
-    right: 221,
-  },
-  groupLayout: {
-    width: 139,
-    height: 145,
-    top: 0,
-    position: "absolute",
-  },
-  textTypo: {
-    fontSize: FontSize.size_11xl,
-    top: 80,
-    fontWeight: "500",
-    textAlign: "center",
-    color: Color.colorGray_100,
-    fontFamily:FontFamily.poppinsSemiBold,
-    position: "absolute",
-  },
-  iconLayout: {
-    height: 37,
-    width: 37,
-    position: "absolute",
-  },
   roundedRectangle: {
     top: "46.38%",
     right: "8.61%",
@@ -272,53 +169,17 @@ const styles = StyleSheet.create({
     height: "7%",
     borderStyle: "solid",
   },
-  v960Ning051: {
-    top: 640,
-    width: 640,
-    height: 360,
-    transform: [
-      {
-        rotate: "-90deg",
-      },
-    ],
-    left: 0,
+  roundedBorder: {
+    borderWidth: 1,
+    borderStyle: "solid",
     position: "absolute",
   },
-  gradientBlueAbstractBackgroIcon: {
-    opacity: 0.64,
-  },
-  welcome: {
-    fontSize: 32,
-    //width: 221,
-    //height: 34,
-    fontWeight: "300",
-    textAlign: "left",
-    top: 10,
-    fontFamily: FontFamily.interMedium,
-  },
-  celestine: {
-    top: 43,
-    fontSize: 22,
-    fontWeight: "300",
-    height: 26,
-    textAlign: "left",
-    width: 261,
-  },
-  welcomeParent: {
-    left: 0,
-    top: 0,
-  },
-  groupFrame: {
-    top: 170,
-    left: 30,
-  },
-  groupChild: {
-    top: 274,
-    height: 424,
-  },
-  gradientBlueAbstractBackgroParent: {
-    height: 698,
-    top: 0,
+  logo: {
+    width: 80, // Make the logo smaller
+    height: 80, // Make the logo smaller
+    marginBottom: 10,
+    position: "absolute",
+    top: 50, // Position the logo at the top
   },
   roundedRectangle1: {
     top: "38%",
@@ -332,102 +193,163 @@ const styles = StyleSheet.create({
     height: "7%",
     borderStyle: "solid",
   },
-  groupContainer: {
-    top: 0,
-    height: 800,
-    width: 360,
+  appointmentList: {
+    height: height*0.15,
+    marginTop: 10,
   },
-  upcomingEvents: {
-    top: 320,
-    left: 108,
-    color: Color.colorBlack,
-    fontSize: FontSize.size_xs,
-    textAlign: "left",
-    fontWeight: "500",
-    fontFamily: FontFamily.poppinsSemiBold,
+  groupPosition: {
+    width: 360,
+    left: 0,
     position: "absolute",
   },
-  date: {
-    left: 88,
+  groupChild: {
+    top: 274,
+    height: 424,
   },
-  influenzaShot: {
-    left: 191,
+  home: {
+    flex: 1,
+    backgroundColor: Color.colorWhite,
   },
-  text1: {
-    left: 85,
-  },
-  event: {
-    left: 198,
-  },
-  rectangleView: {
-    backgroundColor: Color.colorRosybrown,
-    left: 0,
-    borderRadius: Border.br_7xs,
-  },
-  influenzaShots: {
-    top: 53,
-    left: 24,
-    width: 99,
+  headerContainer: {
+    height: height * 0.35,
+    justifyContent: "center",
     alignItems: "center",
-    display: "flex",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    backgroundColor: "#e0f7fa", // Adjust color as needed
+    position: "relative"
+  },
+  welcome: {
+    paddingTop: 110,
+    fontSize: 35,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Color.colorBlack,
+  },
+  deleteText: {
+    paddingTop: 2.5,
+    fontSize: 11,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Color.colorRosybrown,
+  },
+  userName: {
+    fontSize: 17,
+    paddingBottom:10,
+    fontFamily: FontFamily.poppinsRegular,
     color: Color.colorGray_100,
   },
-  text2: {
-    left: 56,
+  eventsContainer: {
+    backgroundColor: "#f0f4f8",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderRadius: Border.br_7xs,
+    marginHorizontal: 20,
+    marginTop: -30,
+    zIndex: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
-  rectangleGroup: {
-    left: 0,
-  },
-  groupChild1: {
-    left: 100,
-    backgroundColor: Color.colorAntiquewhite,
+  upcomingEvents: {
+    fontSize: FontSize.size_xs,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Color.colorBlack,
+    textAlign: "center",
+    marginBottom: 10,
+    backgroundColor: "#bbdefb",
+    paddingVertical: 10,
     borderRadius: Border.br_7xs,
   },
-  chill1Icon: {
-    top: 15,
-    left: 50,
+  eventDetails: {
+    flexDirection: "row",
+    //justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingRight:10,
+    paddingLeft:15,
+    marginBottom: 10,
   },
-  pneumococcalShots: {
-    top: 54,
-    left: 15,
+  eventDetailText: {
+    flexDirection:'row',
+    //justifyContent:"space-between",
+    flex:1,
+    fontSize: FontSize.size_xs,
+    fontFamily: FontFamily.poppinsSemiBold,
     color: Color.colorGray_100,
-    width: 108,
+  },
+  appointmentContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    display: "flex",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
-  text3: {
-    left: 60,
+  appointmentDate: {
+    fontSize: FontSize.size_sm,
+    fontFamily: FontFamily.poppinsBold,
+    color: Color.colorBlack,
+    flex: 2,
   },
-  rectangleContainer: {
-    left: 221,
-    width: 139,
-    right: 221,
+  appointmentEvent: {
+    fontSize: FontSize.size_sm,
+    fontFamily: FontFamily.poppinsRegular,
+    color: Color.colorGray_100,
+    textAlign: 'center',
+    flex:1, // Flex value to manage space distribution
   },
-  groupView: {
-    top: 451,
-    left: 41,
-    width: 360,
+  appointmentTime: {
+    fontSize: FontSize.size_sm,
+    fontFamily: FontFamily.poppinsRegular,
+    color: Color.colorGray_100,
+    flex: 2, // Flex value to manage space distribution
+    textAlign: 'center', // Align the time to the right
   },
-  groupView2: {
-    top: 451,
-    left: 200,
-    width: 360,
+  noAppointmentsText: {
+    textAlign: "center",
+    color: Color.colorBlack,
+    fontSize: FontSize.size_sm,
+    fontFamily: FontFamily.poppinsRegular,
   },
-  breathing1Icon: {
-    top: 538,
-    left: 207,
+  shotsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+  shotBox: {
+    alignItems: "center",
+    backgroundColor: "#f8bbd0", // Adjust the background color as needed
+    borderRadius: Border.br_7xs,
+    padding: 20,
+    width: "45%",
+  },
+  shotIcon: {
+    width: 50,
+    height: 50,
+    marginBottom: 10,
+  },
+  shotText: {
+    fontSize: FontSize.size_xs,
+    fontFamily: FontFamily.poppinsSemiBold,
+    color: Color.colorBlack,
+  },
+  shotCount: {
+    fontSize: FontSize.size_11xl,
+    fontFamily: FontFamily.poppinsBold,
+    color: Color.colorBlack,
   },
   logoutButton: {
     position: 'absolute',
     bottom: 30,
-    left: 30,
-    top: 100,
+    left: 10,
+    top: 20,
     //transform: [{ translateX: "-50%" }],
-    padding: 20,
-    width: 120,
+    padding: 15,
+    width: 100,
     height: 10,
     backgroundColor: Color.colorDodgerblue_200,
     borderRadius: Border.br_7xs,
+    justifyContent:"center"
   },
   logoutText: {
     color: Color.colorDimgray,
@@ -435,16 +357,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily:FontFamily.poppinsSemiBold,
     position: 'absolute',
-    top: 10,
-    left: 40,
+    top: 5,
+    left: 30,
+    bottom: 4,
+    justifyContent:"center",
 
-  },
-  home: {
-    backgroundColor: Color.colorWhite,
-    flex: 1,
-    height: 800,
-    overflow: "hidden",
-    width: "100%",
   },
 });
 

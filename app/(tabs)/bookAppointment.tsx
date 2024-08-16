@@ -1,35 +1,147 @@
 import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { ParamListBase, useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { format, differenceInYears, differenceInDays } from 'date-fns';
 
 const BookAppointment = () => {
   const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
+  const [eligibility, setEligibility] = React.useState({
+    influenza: true,
+    pneumococcal1: true,
+    pneumococcal2: true,
+  });
+
+  // React.useEffect(() => {
+  //   const checkEligibility = async () => {
+  //     try {
+  //       const storedUserInfo = await AsyncStorage.getItem('userInfo');
+  //       if (storedUserInfo) {
+  //         const userInfo = JSON.parse(storedUserInfo);
+  //         let influenzaEligible = true;
+  //         let pneumococcal1Eligible = true;
+  //         let pneumococcal2Eligible = true;
+
+  //         const today = new Date();
+
+  //         // Check for influenza eligibility
+  //         if (userInfo.influenzaDoses.length > 0) {
+  //           const lastInfluenzaDose = new Date(userInfo.influenzaDoses[userInfo.influenzaDoses.length - 1].date);
+  //           if (differenceInDays(today, lastInfluenzaDose) < 365) {
+  //             influenzaEligible = false;
+  //           }
+  //         }
+  //         const pneumococcalDosesTaken = userInfo.pneumococcalDoses.length;
+
+  //         // Check for pneumococcal eligibility
+  //         if (pneumococcalDosesTaken >= 1) {
+  //           pneumococcal1Eligible = false; // First dose has been taken
+  //           pneumococcal2Eligible = true;
+  //         }
+  //         if (pneumococcalDosesTaken >= 2) {
+  //           pneumococcal1Eligible = false;
+  //           pneumococcal2Eligible = false; // Both doses have been taken
+  //         }
+
+  //         // Set the eligibility state
+  //         setEligibility({
+  //           influenza: influenzaEligible,
+  //           pneumococcal1: pneumococcal1Eligible,
+  //           pneumococcal2: pneumococcal2Eligible,
+  //         });
+  //       }
+  //     } catch (error) {
+  //       console.error('Error checking eligibility:', error);
+  //     }
+  //   };
+
+  //   checkEligibility();
+  // }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkEligibility = async () => {
+        try {
+          const storedUserInfo = await AsyncStorage.getItem('userInfo');
+          if (storedUserInfo) {
+            const userInfo = JSON.parse(storedUserInfo);
+            let influenzaEligible = true;
+            let pneumococcal1Eligible = true;
+            let pneumococcal2Eligible = true;
+
+            const today = new Date();
+
+            // Check for influenza eligibility
+            if (userInfo.influenzaDoses.length > 0) {
+              const lastInfluenzaDose = new Date(userInfo.influenzaDoses[userInfo.influenzaDoses.length - 1].date);
+              if (differenceInDays(today, lastInfluenzaDose) < 365) {
+                influenzaEligible = false;
+              }
+            }
+            const pneumococcalDosesTaken = userInfo.pneumococcalDoses.length;
+
+            // Check for pneumococcal eligibility
+            if (pneumococcalDosesTaken >= 1) {
+              pneumococcal1Eligible = false; // First dose has been taken
+              pneumococcal2Eligible = true;
+            }
+            if (pneumococcalDosesTaken >= 2) {
+              pneumococcal1Eligible = false;
+              pneumococcal2Eligible = false; // Both doses have been taken
+            }
+
+            // Set the eligibility state
+            setEligibility({
+              influenza: influenzaEligible,
+              pneumococcal1: pneumococcal1Eligible,
+              pneumococcal2: pneumococcal2Eligible,
+            });
+          }
+        } catch (error) {
+          console.error('Error checking eligibility:', error);
+        }
+      };
+
+      checkEligibility();
+    }, [])
+  );
 
   const vaccines = [
     {
       name: 'Influenza',
       info: 'Taken once a year',
       icon: require("../../assets/influenza-1.png"),
-      eligibility: true,
+      eligibility: eligibility.influenza,
     },
     {
       name: 'Pneumococcal 1',
       info: 'Taken once in a lifetime',
       icon: require("../../assets/hand-1.png"),
-      eligibility: true,
+      eligibility: eligibility.pneumococcal1,
     },
     {
       name: 'Pneumococcal 2',
       info: 'Taken once in a lifetime',
       icon: require("../../assets/hand-1.png"),
-      eligibility: false,
+      eligibility: eligibility.pneumococcal2,
     },
   ];
 
   const handlePress = (vaccine: { name?: string; info?: string; icon?: any; eligibility: any; }) => {
     if (vaccine.eligibility) {
-      navigation.navigate("bookingPage");
+      let vaccineType = vaccine.name; // Default to the name in the vaccines array
+
+    // Map the name to specific vaccine types
+      if (vaccine.name === 'Pneumococcal 1') {
+        vaccineType = 'PCV13';
+      } else if (vaccine.name === 'Pneumococcal 2') {
+        vaccineType = 'PPSV23';
+    }
+      navigation.navigate("bookingPage",{
+        vaccinationShot: vaccineType, // Pass the vaccine name as a parameter
+      });
     }
   };
 

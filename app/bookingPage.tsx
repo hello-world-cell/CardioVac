@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Platform, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useRoute } from '@react-navigation/native';
+
 
 import { format, addDays, isWeekend } from 'date-fns';
 
 import { getAuth } from '@firebase/auth'; // Import getAuth for Firebase Authentication
 
-import saveAppointment from '../Firebase/SaveAppointment'; // Import saveAppointment function
+//import saveAppointment from '../Firebase/SaveAppointment'; // Import saveAppointment function
+import saveAppointment, {Appointment} from './Data/SaveAppointment';
+import { Color } from '@/GlobalStyles';
 
 const getNextWeekdays = () => {
   const weekdays = [];
@@ -27,7 +33,13 @@ const BookingScreen = () => {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);  // <--- Add this line
+  const [appointments, setAppointments] = useState<Appointment[]>([]); // Maintain state for appointments
   const nextWeekdays = getNextWeekdays();
+  const navigation = useNavigation<StackNavigationProp<ParamListBase>>();
+  const route = useRoute();
+  const { vaccinationShot } = route.params as { vaccinationShot: string }; // Get the vaccine type from navigation params
+
+
   const slots = [
     '08:30 AM', '09:00 AM', '09:30 AM',
     '10:00 AM', '11:30 AM', '12:00 PM',
@@ -64,34 +76,27 @@ const BookingScreen = () => {
       return;
     }
   
-
-    // Get the current user's ID
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) {
-      Alert.alert("Error", "User not authenticated.");
-      return;
-    }
-
-    const userId = user.uid;
-    const appointment = {
-      date: selectedDate as Date,
-      time: selectedSlot as string,
+    const appointment: Appointment = {
+      date: selectedDate.toISOString(), // Save date as string
+      time: selectedSlot,
       place: 'Finest Health Medical Centre',
-      vaccinationShot: 'Influenza'
+      vaccinationShot: vaccinationShot
     };
-
+  
     try {
-      await saveAppointment(userId, appointment);
+      await saveAppointment(appointment, (updatedAppointments:Appointment[]) => {
+        setAppointments(updatedAppointments); // Update state with the new appointments list
+        // Alert.alert("Success", "Appointment booked successfully!");
+      });
       Alert.alert("Success", "Appointment booked successfully!");
+      navigation.navigate("index")
     } catch (error) {
       Alert.alert("Error", "Failed to book appointment.");
       console.error("Error booking appointment: ", error);
     }
-  
-  }
+  };
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.safeArea}>
       <Text style={styles.title}>Book your Influenza shot</Text>
       <View style={styles.medicalCentreInfo}>
         <Text style={styles.centreName}>Finest Health Medical Centre</Text>
@@ -112,7 +117,7 @@ const BookingScreen = () => {
         onCancel={hideDatePicker}
         date={selectedDate || new Date()}
       />
-      <Text>Selected Date: {selectedDate ? format(selectedDate, 'PPP') : 'None'}</Text>
+      <Text style={styles.selectedDateText}>Selected Date: {selectedDate ? format(selectedDate, 'PPP') : 'None'}</Text>
 
       <View style={styles.datePicker}>
         {nextWeekdays.map((date, index) => (
@@ -148,11 +153,15 @@ const BookingScreen = () => {
       <Pressable style={styles.bookButton}  onPress={handleBookPress}>
         <Text style={styles.bookButtonText}>Book Appointment</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -160,12 +169,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
+    paddingTop:40,
+    paddingBottom:20,
     fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
+    backgroundColor:'#e0f7fa',
   },
   medicalCentreInfo: {
     marginBottom: 16,
+    paddingHorizontal:20,
   },
   centreName: {
     fontSize: 18,
@@ -177,10 +190,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#007bff',
     borderRadius: 5,
     marginBottom: 10,
+    marginLeft:20,
+
   },
   datePickerText: {
     color: '#fff',
     fontSize: 14,
+    //paddingLeft:20,
+    justifyContent:"center"
   },
   address: {
     fontSize: 14,
@@ -207,6 +224,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
+    paddingHorizontal:20,
+    paddingLeft:20,
+
   },
   dateButton: {
     padding: 8,
@@ -218,12 +238,14 @@ const styles = StyleSheet.create({
   },
   selectedDate: {
     backgroundColor: '#007bff',
+    paddingHorizontal:20,
   },
   slotsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 16,
+    paddingHorizontal:20,
   },
   slotButton: {
     padding: 8,
@@ -232,9 +254,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     width: '48%',
     alignItems: 'center',
+    paddingHorizontal:20,
   },
   selectedSlot: {
     backgroundColor: '#007bff',
+    paddingHorizontal:20,
   },
   slotText: {
     fontSize: 14,
@@ -245,24 +269,37 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    paddingHorizontal:20,
     marginBottom: 8,
   },
   summaryDetail: {
     fontSize: 14,
     color: '#666',
     marginBottom: 4,
+    paddingHorizontal:20,
   },
   bookButton: {
     padding: 16,
-    borderRadius: 4,
+    borderRadius: 0,
     backgroundColor: '#007bff',
     alignItems: 'center',
+    paddingHorizontal:20,
+
   },
   bookButtonText: {
     fontSize: 16,
     color: '#fff',
     fontWeight: 'bold',
+    paddingHorizontal:40,
   },
+  selectedDateText: {
+    marginLeft: 16, // Add margin to the left
+    marginRight: 16, // Add margin to the right to prevent it from being too close to the edge
+    marginTop: 10, // Add margin to the top for spacing above
+    marginBottom: 10, // Add margin to the bottom for spacing below
+    fontSize: 16, // Adjust font size as needed
+    color: '#000', // Optional: Set the color of the text
+},
 });
 
 export default BookingScreen;
