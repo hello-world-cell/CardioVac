@@ -119,7 +119,7 @@ const Home = () => {
         <Text style={styles.upcomingEvents}>Upcoming events</Text>
         <View style={styles.eventDetails}>
           <Text style={styles.eventDetailText}>Date</Text>
-          <Text style={styles.eventDetailText}>Event</Text>
+          <Text style={styles.eventDetailText}>Shot</Text>
           <Text style={styles.eventDetailText}>Time</Text>
         </View>
         {appointments.length > 0 ? (
@@ -320,8 +320,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f8bbd0", // Adjust the background color as needed
     borderRadius: Border.br_7xs,
-    padding: 20,
+    //padding: 20,
+    paddingVertical: 20, // Adjust vertical padding for consistency
+    paddingHorizontal: 10, 
     width: "45%",
+    justifyContent: "space-between", // Center the content vertically
+    flexDirection: "column", 
+    height:170,
   },
   shotIcon: {
     width: 50,
@@ -332,11 +337,14 @@ const styles = StyleSheet.create({
     fontSize: FontSize.size_xs,
     fontFamily: FontFamily.poppinsSemiBold,
     color: Color.colorBlack,
+    textAlign:"center",
   },
   shotCount: {
     fontSize: FontSize.size_11xl,
     fontFamily: FontFamily.poppinsBold,
     color: Color.colorBlack,
+    textAlign:"center",
+    marginBottom:10,
   },
   logoutButton: {
     position: 'absolute',
